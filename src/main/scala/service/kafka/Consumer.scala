@@ -62,47 +62,26 @@ object Consumer {
           concat_ws(",", collect_list($"message")).as("error_messages")
         )
 
-
-//      val query = errorAnalysis.writeStream
-//        .outputMode("append")
-//        .format("console")
-//        .option("truncate", "false")
-//        .trigger(Trigger.ProcessingTime("10 seconds"))
-//        .start()
-
       // Сохраняем аналитику в ClickHouse
-//      val clickhouseSink = errorAnalysis.writeStream
-//        .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
-//          batchDF.write
-//
-//            .format("clickhouse")
-//            .option("host", "clickhouse")
-//            .option("protocol", "https")
-//            .option("http_port", "8123")
-//            .option("database", "default")
-//            .option("table", AppConfig.CLICKHOUSE_TABLE_ERROR)
-//            .option("user", AppConfig.CLICKHOUSE_USER)
-//            .option("password", AppConfig.CLICKHOUSE_PASSWORD)
-//            .option("ssl", "true")
-//            .mode("append")
-//            .save()
+      val clickhouseSink = errorAnalysis.writeStream
+        .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
 
-//          batchDF.write
-//            .mode("append")
-//            .format("jdbc")
-//            .option("url", AppConfig.CLICKHOUSE_URL)
-//            .option("dbtable", AppConfig.CLICKHOUSE_TABLE_ERROR)
-//            .option("driver", "com.clickhouse.jdbc.ClickHouseDriver")
-//            .option("user", AppConfig.CLICKHOUSE_USER)
-//            .option("password", AppConfig.CLICKHOUSE_PASSWORD)
-//            .option("batchsize", "10000")
-//            .save()
-//        }
-//        .trigger(Trigger.ProcessingTime("30 seconds"))
-//        .start()
+          batchDF.write
+            .mode("append")
+            .format("jdbc")
+            .option("url", AppConfig.CLICKHOUSE_URL)
+            .option("dbtable", AppConfig.CLICKHOUSE_TABLE_ERROR)
+            .option("driver", "ru.yandex.clickhouse.ClickHouseDriver")
+            .option("user", AppConfig.CLICKHOUSE_USER)
+            .option("password", AppConfig.CLICKHOUSE_PASSWORD)
+            .option("batchsize", "10000")
+            .save()
+        }
+        .trigger(Trigger.ProcessingTime("30 seconds"))
+        .start()
 
       // Считаем общую статистику
-      val generalStats = parsedData
+      val generalStats = errors
         .withWatermark("processing_time", "10 minutes")
         .groupBy(
           window($"processing_time", "1 hour"),
@@ -113,6 +92,15 @@ object Consumer {
           count("*").as("count"),
           avg(length($"message")).as("avg_message_length")
         )
+        .select(
+          $"window.start".as("window_start"),
+          $"window.end".as("window_end"),
+          $"level",
+          $"component",
+          $"count",
+          $"avg_message_length",
+          current_timestamp().as("processing_time")  // добавляем время обработки
+        )
 
       val statsToClickhouse = generalStats.writeStream
         .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
@@ -121,18 +109,17 @@ object Consumer {
             .format("jdbc")
             .option("url", AppConfig.CLICKHOUSE_URL)
             .option("dbtable", AppConfig.CLICKHOUSE_TABLE_STATS)
-            .option("driver", "com.clickhouse.jdbc.ClickHouseDriver")
+            .option("driver", "ru.yandex.clickhouse.ClickHouseDriver")
             .option("user", AppConfig.CLICKHOUSE_USER)
             .option("password", AppConfig.CLICKHOUSE_PASSWORD)
-//            .option("batchsize", "10000")
+            .option("batchsize", "1000")
             .save()
         }
         .trigger(Trigger.ProcessingTime("1 minute"))
         .start()
 
-//      clickhouseSink.awaitTermination()
+      clickhouseSink.awaitTermination()
       statsToClickhouse.awaitTermination()
-//      query.awaitTermination()
     }
 
     catch {
