@@ -4,7 +4,8 @@
 
 ## Архитектура
 
-![Диаграмма без названия](https://github.com/user-attachments/assets/388cc710-a096-4df4-b5bd-120a71b9e83b)
+![Диаграмма без названия3](https://github.com/user-attachments/assets/cf7d46ea-b0d9-4e0e-af51-7c3df5ef5205)
+
 
 ### Этап 1: Загрузка данных (LogProcessor)
 
