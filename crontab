@@ -1,0 +1,6 @@
+SPARK_HOME=/opt/spark
+JAVA_HOME=/opt/java/openjdk
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/spark/bin
+*/2 * * * * /app/producer-cron.sh
+
+ #
