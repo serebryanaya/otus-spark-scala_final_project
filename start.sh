@@ -29,15 +29,9 @@ until nc -z $KAFKA_HOST $KAFKA_PORT; do
   sleep 2
 done
 
-# Ожидание ClickHouse
-#until nc -z $CLICKHOUSE_HOST $CLICKHOUSE_PORT; do
-#  echo "Waiting for CLickhouse ($CLICKHOUSE_HOST:$CLICKHOUSE_PORT)..."
-#  sleep 2
-#done
+echo "All services are ready. Starting Spark applications..."
 
-echo "All services are ready. Starting Spark application..."
-
-# Запуск Spark приложений
+# Запуск эмулятора один раз
 spark-submit \
   --class service.emulator.LogProcessor \
   --master local[*] \
@@ -49,7 +43,16 @@ spark-submit \
   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5 \
   /app/app.jar
 
-spark-submit \
+echo "Applying crontab configuration..."
+crontab /etc/cron.d/producer-cron
+
+# Запуск cron в foreground (важно!)
+echo "Starting cron service..."
+cron -f &
+
+# Запуск consumer в фоне
+echo "Starting consumer..."
+exec  spark-submit \
   --class service.kafka.Consumer \
   --master local[*] \
   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5 \
