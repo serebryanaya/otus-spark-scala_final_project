@@ -89,4 +89,9 @@ ORDER BY time ASC, component
 
 #### 7. Остановка сервисов и очистка
 
-docker-compose down -v ; docker stop $(docker ps -aq); docker rm -f $(docker ps -aq) ; docker rmi -f $(docker images -aq) ;  docker network prune -f  ; docker volume prune -f -a 
+docker-compose down -v ; \
+docker stop $(docker ps -aq); \
+docker rm -f $(docker ps -aq) ; \
+docker rmi -f $(docker images -aq) ;  \
+docker network prune -f  ; \
+docker volume prune -f -a 
