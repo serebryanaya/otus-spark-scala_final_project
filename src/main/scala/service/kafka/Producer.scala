@@ -6,53 +6,50 @@ import org.apache.spark.sql.functions._
 
 object Producer {
   def main(args: Array[String]): Unit = {
-//    val spark = SparkSession.builder()
-//      .appName("KafkaProducer")
-//      .master("local[*]")
-//      .getOrCreate()
-//
-//    import spark.implicits._
-//
-//    println("Reading data from PostgreSQL...")
-//
-//    // Читаем из PostgreSQL
-//    val sourceDF = spark.read
-//      .format(AppConfig.JDBC_FORMAT)
-//      .option("url", AppConfig.POSTGRES_URL)
-//      .option("dbtable", AppConfig.POSTGRES_TABLE_RAW_LOGS)
-//      .option("user", AppConfig.POSTGRES_USER)
-//      .option("password", AppConfig.POSTGRES_PASSWORD)
-//      .option("driver", AppConfig.POSTGRES_DRIVER)
-//      .load()
-//
-//    val rowCount = sourceDF.count()
-//    println(s"Read $rowCount rows from PostgreSQL")
-//
-//    if (rowCount == 0) {
-//      println("No data found in PostgreSQL. Exiting.")
-//      spark.stop()
-//      return
-//    }
-//
-//    println("Sample of data to be sent to Kafka:")
-//    sourceDF.show(5, false)
-//
-//    // Преобразуем в JSON для Kafka
-//    val kafkaMessages = sourceDF
-//      .select(to_json(struct("*")).as("value"))
-//      .selectExpr("CAST(value AS STRING)")
-//
-//    // Отправляем в Kafka
-//    println(s"Sending $rowCount messages to Kafka topic '${AppConfig.KAFKA_TOPIC_RAW}'...")
-//
-//    kafkaMessages.write
-//      .format(AppConfig.KAFKA_FORMAT)
-//      .option("kafka.bootstrap.servers", AppConfig.KAFKA_BOOTSTRAP_SERVERS)
-//      .option("topic", AppConfig.KAFKA_TOPIC_RAW)
-//      .save()
-//
-//    println("Successfully sent messages to Kafka")
-//
-//    spark.stop()
+    val spark = SparkSession.builder()
+      .appName("KafkaProducer")
+      .master("local[*]")
+      .getOrCreate()
+
+    import spark.implicits._
+
+    println("Reading data from PostgreSQL...")
+
+    val sourceDF = spark.read
+      .format("jdbc")
+      .option("url", AppConfig.POSTGRES_URL)
+      .option("dbtable", AppConfig.POSTGRES_TABLE_RAW_LOGS)
+      .option("user", AppConfig.POSTGRES_USER)
+      .option("password", AppConfig.POSTGRES_PASSWORD)
+      .option("driver", AppConfig.POSTGRES_DRIVER)
+      .load()
+
+    val rowCount = sourceDF.count()
+    println(s"Read $rowCount rows from PostgreSQL")
+
+    if (rowCount == 0) {
+      println("No data found in PostgreSQL. Exiting.")
+      spark.stop()
+      return
+    }
+
+    println("Sample of data to be sent to Kafka:")
+    sourceDF.show(5, false)
+
+    val kafkaMessages = sourceDF
+      .select(to_json(struct("*")).as("value"))
+      .selectExpr("CAST(value AS STRING)")
+
+    println(s"Sending $rowCount messages to Kafka topic '${AppConfig.KAFKA_TOPIC_RAW}'...")
+
+    kafkaMessages.write
+      .format("kafka")
+      .option("kafka.bootstrap.servers", AppConfig.KAFKA_BOOTSTRAP_SERVERS)
+      .option("topic", AppConfig.KAFKA_TOPIC_RAW)
+      .save()
+
+    println("Successfully sent messages to Kafka")
+
+    spark.stop()
   }
 }

@@ -19,21 +19,13 @@ CREATE TABLE IF NOT EXISTS nova_errors (
     processing_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS nova_errors2 (
-    level VARCHAR(50) NOT NULL,
-    component VARCHAR(255) NOT NULL,
-    count BIGINT NOT NULL DEFAULT 0,
-    processing_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
 
 CREATE INDEX idx_nova_logs_level ON nova_logs(level);
 CREATE INDEX idx_nova_errors_window_start ON nova_errors (window_start);
 CREATE INDEX idx_nova_errors_level ON nova_errors (level);
-CREATE INDEX idx_nova_errors_level2 ON nova_errors2 (level);
 
 GRANT ALL PRIVILEGES ON TABLE nova_logs TO db_user;
 GRANT ALL PRIVILEGES ON TABLE nova_errors TO db_user;
-GRANT ALL PRIVILEGES ON TABLE nova_errors2 TO db_user;
 
 DO $$
 BEGIN

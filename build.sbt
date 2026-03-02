@@ -34,7 +34,4 @@ libraryDependencies ++= Seq(
     exclude("com.google.guava", "guava"),
   "org.apache.kafka" % "kafka-clients" % kafkaVersion,
   "org.postgresql" % "postgresql" % postgresVersion,
-
-//  "ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseVersion
-//  "com.google.guava" % "guava" % "33.0.0-jre"
 )

@@ -15,8 +15,4 @@ object AppConfig {
   // Kafka
   val KAFKA_BOOTSTRAP_SERVERS = "kafka:9092"
   val KAFKA_TOPIC_RAW = "nova-logs-raw"
-
-  // Format
-  val JDBC_FORMAT = "jdbc"
-  val KAFKA_FORMAT = "kafka"
 }
