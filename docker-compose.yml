@@ -62,17 +62,17 @@ services:
     networks:
       - data_network
 
-  clickhouse:
-    image: clickhouse/clickhouse-server:23.3
-    container_name: clickhouse
-    ports:
-      - "8123:8123"
-      - "9000:9000"
-    volumes:
-      - ./init/clickhouse:/docker-entrypoint-initdb.d
-      - clickhouse_data:/var/lib/clickhouse
-    networks:
-      - data_network
+#  clickhouse:
+#    image: clickhouse/clickhouse-server:23.3
+#    container_name: clickhouse
+#    ports:
+#      - "8123:8123"
+#      - "9000:9000"
+#    volumes:
+#      - ./init/clickhouse:/docker-entrypoint-initdb.d
+#      - clickhouse_data:/var/lib/clickhouse
+#    networks:
+#      - data_network
 
   grafana:
     image: grafana/grafana:latest
@@ -85,7 +85,7 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
     depends_on:
-      - clickhouse
+#      - clickhouse
       - postgres
     networks:
       - data_network
@@ -95,10 +95,12 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: error-detector
+    ports:
+      - "4040:4040"
     depends_on:
       - postgres
       - kafka
-      - clickhouse
+#      - clickhouse
     volumes:
       - ./logs:/app/logs
       - ./target/scala-2.12:/app/jars
@@ -110,14 +112,14 @@ services:
       - POSTGRES_PASSWORD=password
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - KAFKA_TOPIC=nova-logs-raw
-      - CLICKHOUSE_HOST=clickhouse
-      - CLICKHOUSE_PORT=8123
+#      - CLICKHOUSE_HOST=clickhouse
+#      - CLICKHOUSE_PORT=8123
     networks:
       - data_network
 
 volumes:
   postgres_data:
-  clickhouse_data:
+#  clickhouse_data:
   grafana_data:
 
 networks:

@@ -7,7 +7,8 @@ object AppConfig {
   val POSTGRES_USER = "db_user"
   val POSTGRES_PASSWORD = "password"
   private val POSTGRES_DB_NAME = "otus"
-  val POSTGRES_TABLE = "nova_logs"
+  val POSTGRES_TABLE_RAW_LOGS = "nova_logs"
+  val POSTGRES_TABLE_ERRORS = "nova_errors2"
   val POSTGRES_URL: String = "jdbc:postgresql://postgres:5432/" + POSTGRES_DB_NAME
   val POSTGRES_DRIVER = "org.postgresql.Driver"
 
@@ -16,14 +17,13 @@ object AppConfig {
   val KAFKA_TOPIC_RAW = "nova-logs-raw"
 
   // ClickHouse
-  val CLICKHOUSE_URL = "jdbc:clickhouse://clickhouse:8123/"
-  val CLICKHOUSE_DRIVER = "ru.yandex.clickhouse.ClickHouseDriver"
-  val CLICKHOUSE_TABLE_ERROR = "nova_error_analysis"
-  val CLICKHOUSE_TABLE_STATS = "nova_error_stats"
-  val CLICKHOUSE_USER = "default"
-  val CLICKHOUSE_PASSWORD = ""
+//  val CLICKHOUSE_URL = "jdbc:clickhouse://clickhouse:8123/"
+//  val CLICKHOUSE_DRIVER = "com.clickhouse.jdbc.ClickHouseDriver"
+//  val CLICKHOUSE_TABLE_STATS = "nova_errors"
+//  val CLICKHOUSE_USER = "default"
+//  val CLICKHOUSE_PASSWORD = ""
 
+  // Format
   val JDBC_FORMAT = "jdbc"
   val KAFKA_FORMAT = "kafka"
-
 }

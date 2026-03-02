@@ -15,11 +15,11 @@ object Producer {
 
     println("Reading data from PostgreSQL...")
 
-    // 1. Читаем из PostgreSQL
+    // Читаем из PostgreSQL
     val sourceDF = spark.read
       .format(AppConfig.JDBC_FORMAT)
       .option("url", AppConfig.POSTGRES_URL)
-      .option("dbtable", AppConfig.POSTGRES_TABLE)
+      .option("dbtable", AppConfig.POSTGRES_TABLE_RAW_LOGS)
       .option("user", AppConfig.POSTGRES_USER)
       .option("password", AppConfig.POSTGRES_PASSWORD)
       .option("driver", AppConfig.POSTGRES_DRIVER)
@@ -37,12 +37,12 @@ object Producer {
     println("Sample of data to be sent to Kafka:")
     sourceDF.show(5, false)
 
-    // 2. Преобразуем в JSON для Kafka
+    // Преобразуем в JSON для Kafka
     val kafkaMessages = sourceDF
       .select(to_json(struct("*")).as("value"))
       .selectExpr("CAST(value AS STRING)")
 
-    // 3. Отправляем в Kafka
+    // Отправляем в Kafka
     println(s"Sending $rowCount messages to Kafka topic '${AppConfig.KAFKA_TOPIC_RAW}'...")
 
     kafkaMessages.write

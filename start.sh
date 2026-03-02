@@ -30,29 +30,27 @@ until nc -z $KAFKA_HOST $KAFKA_PORT; do
 done
 
 # Ожидание ClickHouse
-until nc -z $CLICKHOUSE_HOST $CLICKHOUSE_PORT; do
-  echo "Waiting for CLickhouse ($CLICKHOUSE_HOST:$CLICKHOUSE_PORT)..."
-  sleep 2
-done
+#until nc -z $CLICKHOUSE_HOST $CLICKHOUSE_PORT; do
+#  echo "Waiting for CLickhouse ($CLICKHOUSE_HOST:$CLICKHOUSE_PORT)..."
+#  sleep 2
+#done
 
 echo "All services are ready. Starting Spark application..."
 
-# Запуск Spark приложения
+# Запуск Spark приложений
 spark-submit \
   --class service.emulator.LogProcessor \
   --master local[*] \
   /app/app.jar
 
-# После загрузки в Postgres, запускаем Kafka Producer
 spark-submit \
   --class service.kafka.Producer \
   --master local[*] \
   --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5 \
   /app/app.jar
 
-# Затем запускаем анализ Spark
 spark-submit \
   --class service.kafka.Consumer \
   --master local[*] \
-  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5,ru.yandex.clickhouse:clickhouse-jdbc:0.1.54 \
+  --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.5 \
   /app/app.jar

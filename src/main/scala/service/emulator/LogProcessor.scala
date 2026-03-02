@@ -39,22 +39,15 @@ object LogProcessor {
     // Добавляем вычисляемые поля
     val enrichedDF = parsedDF
       .withColumn("processing_time", current_timestamp())
-      .withColumn("is_error", $"level" === "ERROR")
-      .withColumn("is_warning", $"level" === "WARNING")
-      .withColumn("hour", hour($"processing_time"))
-      .withColumn("date", to_date($"processing_time"))
       .select(
         $"level",
         $"component",
         $"request_id",
         $"instance_id",
         $"message",
-        $"processing_time",
-        $"is_error",
-        $"is_warning",
-        $"hour",
-        $"date"
+        $"processing_time"
       )
+
 
     val validCount = enrichedDF.filter($"level" =!= "UNKNOWN").count()
     println(s"Valid records: $validCount/$totalCount")
@@ -72,7 +65,7 @@ object LogProcessor {
 
       enrichedDF.write
         .mode("append")
-        .jdbc(AppConfig.POSTGRES_URL, AppConfig.POSTGRES_TABLE, jdbcProps)
+        .jdbc(AppConfig.POSTGRES_URL, AppConfig.POSTGRES_TABLE_RAW_LOGS, jdbcProps)
 
       println(s"Successfully wrote $validCount records to PostgreSQL")
     } else {
