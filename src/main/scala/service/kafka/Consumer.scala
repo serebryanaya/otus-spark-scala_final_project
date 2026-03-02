@@ -2,7 +2,7 @@ package service.kafka
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.streaming.Trigger
+import org.apache.spark.sql.streaming.{OutputMode, Trigger}
 import config.AppConfig
 import org.apache.spark.sql.types._
 
@@ -41,78 +41,80 @@ object Consumer {
       println(s"Connecting to Kafka: ${AppConfig.KAFKA_BOOTSTRAP_SERVERS}")
       println(s"Subscribing to topic: ${AppConfig.KAFKA_TOPIC_RAW}")
 
-      // Чистая Kafka конфигурация без лишних опций
+      // Читаем из Kafka
       val kafkaDF = spark.readStream
-        .format(AppConfig.KAFKA_FORMAT)
+        .format("kafka")
         .option("kafka.bootstrap.servers", AppConfig.KAFKA_BOOTSTRAP_SERVERS)
         .option("subscribe", AppConfig.KAFKA_TOPIC_RAW)
-        .option("startingOffsets", "earliest")
+        .option("startingOffsets", "earliest")  // Читаем с начала
         .option("failOnDataLoss", "false")
         .option("maxOffsetsPerTrigger", "10000")
+        .option("groupIdPrefix", "spark-consumer") // Добавляем group.id
         .load()
 
-      // Парсим JSON
       val parsedData = kafkaDF
         .selectExpr("CAST(value AS STRING) as json")
-        .select(from_json(col("json"), logRecordSchema).as("data"))
+        .select(from_json(col("json"), logRecordSchema).alias("data"))
         .select("data.*")
+        .filter(col("level") === "ERROR") // Только те, что распарсились
 
-      // Фильтруем только ошибки
-//      val errors = parsedData.filter(col("level") === "ERROR")
-      val errors = parsedData
 
-      // Агрегируем ошибки по часам
-      val errorStats = errors
-//        .withWatermark("processing_time", "1 minute")
+      val errorStats = parsedData
+        .withWatermark("processing_time", "1 hour") // Увеличили с 10 минут до 1 часа
         .groupBy(
-//          window(col("processing_time"), "1 hour"),
+          window(col("processing_time"), "5 minutes"),
           col("level"),
           col("component")
         )
         .agg(count("*").as("count"))
         .select(
-//          col("window.start").as("window_start"),
-//          col("window.end").as("window_end"),
+          col("window.start").as("window_start"),
+          col("window.end").as("window_end"),
           col("level"),
           col("component"),
           col("count"),
           current_timestamp().as("processing_time")
         )
 
-      // Записываем только в nova_errors
-      val errorStatsQuery = errorStats.writeStream
+
+      val query = errorStats.writeStream
         .foreachBatch { (batchDF: DataFrame, batchId: Long) =>
-          val count = batchDF.count()
-          println(s"\n📊 ERROR STATS BATCH $batchId at ${java.time.Instant.now()}")
-          println(s"Error groups: $count")
+          // batchDF - это микро-батч данных, которые нужно записать
+          // batchId - уникальный идентификатор батча
 
-          if (count > 0) {
-            println("Error groups found:")
-            batchDF.show(10, false)
+          println(s"Processing batch $batchId with ${batchDF.count()} rows")
 
-            val totalErrors = batchDF.agg(sum("count")).collect()(0).getLong(0)
-            println(s"Total individual error records in this batch: $totalErrors")
+          if (!batchDF.isEmpty) {
+            // Записываем батч в PostgreSQL
+            batchDF.write
+              .mode("append") // Добавляем данные (не перезаписываем)
+              .jdbc(
+                AppConfig.POSTGRES_URL, // URL базы данных
+                AppConfig.POSTGRES_TABLE_ERRORS, // Имя таблицы
+                jdbcProps // Настройки подключения
+              )
 
-            try {
-              batchDF.write
-                .mode("update")
-                .jdbc(AppConfig.POSTGRES_URL, AppConfig.POSTGRES_TABLE_ERRORS, jdbcProps)
-              println(s"✅ Successfully wrote $count error groups (representing $totalErrors errors) to ${AppConfig.POSTGRES_TABLE_ERRORS}")
-            } catch {
-              case e: Exception =>
-                println(s"❌ Failed to write error stats: ${e.getMessage}")
-                e.printStackTrace()
-            }
-          } else {
-            println("ℹ️ No error groups in this batch")
+            println(s"✅ Batch $batchId written to PostgreSQL")
           }
         }
-        .trigger(Trigger.ProcessingTime("1 minute"))
-        .option("checkpointLocation", "/tmp/spark-checkpoints/error-stats")
+        .outputMode("update") // Для агрегаций с watermark лучше update
+        .trigger(Trigger.ProcessingTime("10 seconds"))
+        .option("checkpointLocation", "/tmp/spark-checkpoints/postgres-write")
         .start()
 
-      println("🟢 Streaming query started!")
-      println("  - Error stats -> nova_errors (ONLY)")
+      // ДИАГНОСТИКА 4: Статистика по уровням
+//
+//      errorStats.writeStream
+//        .format("console")
+//        .outputMode("complete")
+//        .trigger(Trigger.ProcessingTime("10 seconds"))
+//        .start()
+
+      println("🟢 All diagnostic queries started!")
+      println("  - Raw messages → console")
+      println("  - Parse errors → console")
+      println("  - Parsed messages → console")
+      println("  - Level statistics → console")
 
       // Ожидаем завершения
       spark.streams.awaitAnyTermination()

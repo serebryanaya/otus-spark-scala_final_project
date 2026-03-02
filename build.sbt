@@ -35,6 +35,6 @@ libraryDependencies ++= Seq(
   "org.apache.kafka" % "kafka-clients" % kafkaVersion,
   "org.postgresql" % "postgresql" % postgresVersion,
 
-  "ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseVersion
+//  "ru.yandex.clickhouse" % "clickhouse-jdbc" % clickhouseVersion
 //  "com.google.guava" % "guava" % "33.0.0-jre"
 )
